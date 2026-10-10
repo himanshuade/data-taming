@@ -1,0 +1,161 @@
+---
+title: "Assignment 1"
+author: "Himanshu Muley"
+date: "26-02-2024"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+# Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning = FALSE)
+```
+
+```{r }
+#Load the required packages
+library(inspectdf)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(tidyverse)
+library(tidyr)
+library(tinytex)
+library(stringr)
+
+```
+
+# Q1. Loading the data
+
+```{r}
+
+# Your student number goes here
+ysn = 1895211
+# Calculate your student number modulo 3
+filenum <- ysn %% 3
+filenum
+filename <- paste0("./data/archery_",filenum,".csv")
+filename
+
+# Read in the data
+tibble_data <- read_csv(filename, na= c("NA", "XX"))
+head(n=10, tibble_data)
+# Display the first 10 lines of the data
+```
+
+# Q2. Taking a random sample of archers
+
+```{r}
+#
+set.seed(ysn)
+sample_archers <-sample_n(tibble_data, 100, replace = FALSE)
+head(n=10, sample_archers)
+```
+
+
+# Q3. Tidying the data
+
+## Q3(a). Converting from wide form to long form
+```{r}
+#
+
+tidying_the_data <- gather(sample_archers, key = "session", value = "result", session_1:session_6)
+```
+
+## Q3(b). Replacing `result` with 2 new columns
+```{r}
+#
+tidying_the_data <-tidying_the_data %>%
+mutate(
+  shots = str_match(result, "(\\d+)shots")[,2],
+  hits = str_match(result, "(\\d+)times")[,2]
+ )  %>% relocate("shots", .before = result) %>%
+  relocate("hits", .before = result) %>% select(name:hits)
+```
+
+## Q3(c). Replace data in `session` column with session number
+```{r}
+#
+tidying_the_data <- tidying_the_data %>%
+  mutate(session = str_match(session, "session_(\\d+)")[,2])
+
+```
+
+## Q3(d). Replace "Yes/No" with "TRUE/FALSE"
+```{r}
+#
+tidying_the_data <- tidying_the_data %>%
+  mutate(experienced = fct_recode(tidying_the_data$experienced, "FALSE"="No", "TRUE"="Yes"))
+head(n=10, tidying_the_data)
+
+```
+
+# Q4. Identifying data types
+
+Name - This is a Categorical nominal variable because it's just a label used to identify someone, it does not show any ranking.
+
+Experienced - this data is Categorical nominal variable as it  has only 2 categories True and False  where order or ranking does not matter.
+
+Started - This data has dates in it so this is a quantitative continuous variable as time can't be categorized like nominal or ordinal, time keeps going on without any breaks.
+
+Session - This variable type is Categorical ordinal as it can be put in a order or ranking.
+
+Shots - Shots can be considered as quantitative discrete variable as they are unique to every archer which makes it discrete
+Hits- This can also be considered as quantitative discrete variable because it records all the different hits made by different archers making it a discrete value
+
+# Q5. Taming the data
+```{r}
+#
+tidying_the_data$shots <- as.integer(tidying_the_data$shots)
+tidying_the_data$hits <- as.integer(tidying_the_data$hits)
+tidying_the_data$session <- as.ordered(tidying_the_data$session)
+tidying_the_data$started <- dmy(tidying_the_data$started)
+head(n=10, tidying_the_data)
+
+```
+
+# Q5.b) Confirming the remaining varaiables to the "tame data" conventions
+```{r}
+#
+tidying_the_data <- tidying_the_data %>% mutate(started = dmy(tidying_the_data$started))
+tidying_the_data <- tidying_the_data%>%mutate(session=as.ordered(tidying_the_data$session))
+head(n=10, tidying_the_data)
+```
+
+
+# Q6. Adding two new columns to the tidy dataset
+```{r}
+tidying_the_data$days_experience <- dmy('01/02/2024') - tidying_the_data$started
+tidying_the_data$accuracy <- tidying_the_data$hits/tidying_the_data$shots
+head(n=10,tidying_the_data)
+```
+# Q7. displaying the sample statistics for the numerical value in the dataset
+```{r}
+inspect_num(tibble_data)
+```
+
+
+#Q.8 Data set of expereinced archers
+```{r}
+
+data_filtered <- tidying_the_data %>% filter(experienced == TRUE)
+head(data_filtered, n = 10)
+
+```
+# Q9. Graph who can practice shooting the best
+```{r}
+
+ggplot(data_filtered, aes(x = days_experience, y = accuracy)) + geom_point() + geom_smooth()
+```
+
+
+
+
+
+
+
+
+
+
